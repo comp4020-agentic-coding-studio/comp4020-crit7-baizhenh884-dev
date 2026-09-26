@@ -1,0 +1,60 @@
+---
+import { ERROR_MESSAGES, listRooms } from "../lib/bookings";
+import "../styles.css";
+
+const params = Astro.url.searchParams;
+const roomId = Number(params.get("room"));
+const date = params.get("date") ?? "";
+const slotRaw = params.get("slot") ?? "";
+const slot = Number(slotRaw);
+const errorCode = params.get("error");
+const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? "Something went wrong. Try again.") : null;
+
+const room = Number.isInteger(roomId) ? listRooms().find((r) => r.id === roomId) : undefined;
+const hasTarget = room !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isInteger(slot);
+---
+
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Book a room</title>
+  </head>
+  <body>
+    <nav aria-label="site">
+      <a href="/">Availability</a>
+      <a href="/bookings">My bookings</a>
+      <a href="/readme/">About</a>
+    </nav>
+    <main>
+      <h1>Book a room</h1>
+      {
+        !hasTarget ? (
+          <p>Pick a free slot from the <a href="/">availability grid</a> to book it.</p>
+        ) : (
+          <>
+            <p>
+              {room!.name} — {room!.library}, {date} at {slot}:00–{slot + 1}:00
+            </p>
+            {errorMessage && <p role="alert">{errorMessage}</p>}
+            <form method="post" action="/api/bookings">
+              <input type="hidden" name="roomId" value={room!.id} />
+              <input type="hidden" name="date" value={date} />
+              <input type="hidden" name="slot" value={slot} />
+              <label>
+                Name
+                <input type="text" name="name" required />
+              </label>
+              <label>
+                ANU email
+                <input type="email" name="email" required />
+              </label>
+              <button type="submit">Confirm booking</button>
+            </form>
+          </>
+        )
+      }
+    </main>
+  </body>
+</html>
