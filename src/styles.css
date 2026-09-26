@@ -196,6 +196,46 @@ button.secondary:hover {
   color: var(--error-ink);
 }
 
+.success {
+  padding: 0.7rem 1rem;
+  border-left: 4px solid var(--free-ink);
+  border-radius: 4px;
+  background: var(--free-bg);
+  color: var(--free-ink);
+  font-weight: 600;
+}
+
+.not-you {
+  gap: 0.4rem;
+  align-items: baseline;
+  margin-block: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.filters + .not-you {
+  margin-top: -0.5rem;
+}
+
+button.link {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 400;
+  text-decoration: underline;
+}
+
+button.link:hover {
+  background: none;
+  color: #0047cc;
+}
+
+.list tr.highlight td {
+  background: var(--free-bg);
+}
+
 .notice {
   padding: 0.7rem 1rem;
   border-radius: 4px;

@@ -8,6 +8,8 @@ import {
   OPENING_HOUR,
   today,
 } from "../lib/bookings";
+import Nav from "../components/Nav.astro";
+import { hh, shortRoomName } from "../lib/format";
 import "../styles.css";
 
 const LIBRARIES = ["Chifley", "Hancock", "Menzies", "Law"];
@@ -35,8 +37,6 @@ const isToday = date === today();
 const nowHour = currentSydneyHour();
 const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour);
 
-const shortName = (name: string, lib: string) => (name.startsWith(`${lib} `) ? name.slice(lib.length + 1) : name);
-const hh = (slot: number) => `${String(slot).padStart(2, "0")}:00`;
 ---
 
 <!doctype html>
@@ -47,11 +47,7 @@ const hh = (slot: number) => `${String(slot).padStart(2, "0")}:00`;
     <title>Room availability</title>
   </head>
   <body>
-    <nav aria-label="site">
-      <a href="/" aria-current="page">Availability</a>
-      <a href="/bookings">My bookings</a>
-      <a href="/readme/">About</a>
-    </nav>
+    <Nav current="availability" />
     <main class="wide">
       <h1>Room availability</h1>
       <p class="lede">
@@ -116,7 +112,7 @@ const hh = (slot: number) => `${String(slot).padStart(2, "0")}:00`;
                     </tr>
                     {group.rooms.map((room) => {
                       const label = [
-                        shortName(room.name, room.library),
+                        shortRoomName(room.name, room.library),
                         `${room.capacity} seats`,
                         ...(room.equipment ? [room.equipment.replaceAll(",", ", ")] : []),
                       ].join(" · ");

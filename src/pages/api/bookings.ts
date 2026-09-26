@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { BookingError, createBooking, listBookingsForEmail } from "../../lib/bookings";
+import { bookingsHref, rememberEmail } from "../../lib/remember";
 
 // GET ?email= — that email's bookings as JSON. This is how a client finds a
 // booking's id to cancel it, without any server-rendered page needing to
@@ -14,9 +15,10 @@ export const GET: APIRoute = ({ url }) => {
 };
 
 // The write half: a plain HTML form (from /book) POSTs here. Success
-// redirects to the grid; a BookingError redirects back to the same booking
+// remembers the email and redirects to that email's bookings, flagging the
+// new one; a BookingError redirects back to the same booking
 // form with `?error=<code>`, so the no-JS page can show a specific message.
-export const POST: APIRoute = async ({ request, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const form = await request.formData();
   const roomId = Number(form.get("roomId"));
   const date = String(form.get("date") ?? "");
@@ -25,8 +27,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const email = String(form.get("email") ?? "");
 
   try {
-    createBooking({ roomId, date, slot, name, email });
-    return redirect("/", 303);
+    const booking = createBooking({ roomId, date, slot, name, email });
+    rememberEmail(cookies, booking.email);
+    return redirect(`${bookingsHref(booking.email)}&booked=${booking.id}`, 303);
   } catch (err) {
     if (err instanceof BookingError) {
       return redirect(`/book?room=${roomId}&date=${date}&slot=${slot}&error=${err.code}`, 303);

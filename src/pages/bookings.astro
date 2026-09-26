@@ -1,17 +1,30 @@
 ---
+import Nav from "../components/Nav.astro";
 import { ERROR_MESSAGES, listBookingsForEmail, listRooms } from "../lib/bookings";
+import { shortDate, shortRoomName, slotRange } from "../lib/format";
+import { rememberEmail, rememberedEmail } from "../lib/remember";
 import "../styles.css";
 
 const params = Astro.url.searchParams;
-const email = params.get("email") ?? "";
+const queried = (params.get("email") ?? "").trim().toLowerCase();
+if (queried) rememberEmail(Astro.cookies, queried);
+const email = queried || rememberedEmail(Astro.cookies);
 const errorCode = params.get("error");
 const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? "Something went wrong. Try again.") : null;
 
 const rooms = new Map(listRooms().map((room) => [room.id, room]));
-const myBookings = email
-  ? listBookingsForEmail(email).sort((a, b) => (a.date === b.date ? a.slot - b.slot : a.date < b.date ? -1 : 1))
+const myBookings = queried
+  ? listBookingsForEmail(queried).sort((a, b) => (a.date === b.date ? a.slot - b.slot : a.date < b.date ? -1 : 1))
   : [];
-const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
+
+// Only ever matches one of this email's own bookings, so it can't reveal anyone else's.
+const bookedId = Number(params.get("booked"));
+const justBooked = myBookings.find((booking) => booking.id === bookedId);
+const justBookedRoom = justBooked ? rooms.get(justBooked.roomId) : undefined;
+const successMessage =
+  justBooked && justBookedRoom
+    ? `Booked ${shortRoomName(justBookedRoom.name, justBookedRoom.library)}, ${shortDate(justBooked.date)} ${slotRange(justBooked.slot)}`
+    : null;
 ---
 
 <!doctype html>
@@ -22,13 +35,11 @@ const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
     <title>My bookings</title>
   </head>
   <body>
-    <nav aria-label="site">
-      <a href="/">Availability</a>
-      <a href="/bookings" aria-current="page">My bookings</a>
-      <a href="/readme/">About</a>
-    </nav>
+    <Nav current="bookings" email={email} />
     <main>
       <h1>My bookings</h1>
+      <p class="lede">No login — bookings are looked up by email.</p>
+      {successMessage && <p role="status" class="success">{successMessage}</p>}
       <form method="get" class="filters">
         <label>
           ANU email
@@ -36,12 +47,21 @@ const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
         </label>
         <button type="submit">Show my bookings</button>
       </form>
+      {
+        email && (
+          <form method="post" action="/api/email/forget" class="not-you">
+            <input type="hidden" name="next" value="/bookings" />
+            <span>Using {email}.</span>
+            <button type="submit" class="link">Not you? Use a different email</button>
+          </form>
+        )
+      }
       {errorMessage && <p role="alert" class="error">{errorMessage}</p>}
-      {email && myBookings.length === 0 && !errorMessage && <p class="notice">No bookings found for {email}.</p>}
+      {queried && myBookings.length === 0 && !errorMessage && <p class="notice">No bookings found for {queried}.</p>}
       {
         myBookings.length > 0 && (
           <table class="list">
-            <caption class="visually-hidden">Bookings for {email}</caption>
+            <caption class="visually-hidden">Bookings for {queried}</caption>
             <thead>
               <tr>
                 <th scope="col">Room</th>
@@ -54,16 +74,14 @@ const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
               {myBookings.map((booking) => {
                 const room = rooms.get(booking.roomId);
                 return (
-                  <tr>
+                  <tr class={booking.id === bookedId ? "highlight" : undefined}>
                     <td>{room ? `${room.name} — ${room.library}` : `Room ${booking.roomId}`}</td>
                     <td>{booking.date}</td>
-                    <td>
-                      {hh(booking.slot)}–{hh(booking.slot + 1)}
-                    </td>
+                    <td>{slotRange(booking.slot)}</td>
                     <td>
                       <form method="post" action="/api/bookings/cancel">
                         <input type="hidden" name="id" value={booking.id} />
-                        <input type="hidden" name="email" value={email} />
+                        <input type="hidden" name="email" value={queried} />
                         <button type="submit" class="secondary">Cancel</button>
                       </form>
                     </td>

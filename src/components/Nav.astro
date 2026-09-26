@@ -1,0 +1,18 @@
+---
+import { bookingsHref, rememberedEmail } from "../lib/remember";
+
+interface Props {
+  current?: "availability" | "bookings" | "about";
+  email?: string;
+}
+
+const { current } = Astro.props;
+const email = Astro.props.email ?? rememberedEmail(Astro.cookies);
+const here = (page: Props["current"]) => (current === page ? "page" : undefined);
+---
+
+<nav aria-label="site">
+  <a href="/" aria-current={here("availability")}>Availability</a>
+  <a href={bookingsHref(email)} aria-current={here("bookings")}>My bookings</a>
+  <a href="/readme/" aria-current={here("about")}>About</a>
+</nav>
