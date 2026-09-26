@@ -91,7 +91,7 @@ describe("bookings", () => {
   beforeAll(async () => {
     const res = await fetch(new URL("/api/rooms", baseUrl));
     rooms = await res.json();
-    expect(rooms.length, "seed data should include several illustrative rooms").toBeGreaterThanOrEqual(7);
+    expect(rooms.length, "seed data should include several illustrative rooms").toBeGreaterThanOrEqual(11);
   });
 
   // Each scenario below uses its own room (and its own slots within it) so
@@ -169,6 +169,20 @@ describe("bookings", () => {
         bookingParams({ roomId: room.id, date: sydneyDatePlusDays(today, 14), slot: 9, email: uniqueEmail() }),
       );
       expectBookingSucceeds(boundary);
+    });
+  });
+
+  describe("malformed dates", () => {
+    // A date that isn't exactly a real YYYY-MM-DD would get its own key in the
+    // unique index and the daily cap, so it must be rejected outright.
+    it.each([
+      ["a trailing space", () => `${sydneyDatePlusDays(sydneyToday(), 1)} `],
+      ['an "x" suffix', () => `${sydneyDatePlusDays(sydneyToday(), 1)}x`],
+      ["an impossible calendar date", () => "2026-02-30"],
+      ["day 00 of the month the window ends in", () => `${sydneyDatePlusDays(sydneyToday(), 14).slice(0, 7)}-00`],
+    ])("rejects %s as invalid_date", async (_label, date) => {
+      const res = await post("/api/bookings", bookingParams({ roomId: rooms[10].id, date: date(), slot: 9, email: uniqueEmail() }));
+      expectBookingFails(res, "invalid_date");
     });
   });
 
