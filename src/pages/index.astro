@@ -1,8 +1,22 @@
 ---
-import { listMessages } from "../lib/db";
+import { CLOSING_HOUR, listBookingsForDate, listRooms, OPENING_HOUR, today } from "../lib/bookings";
 import "../styles.css";
 
-const messages = listMessages();
+const LIBRARIES = ["Chifley", "Hancock", "Menzies", "Law"];
+
+const params = Astro.url.searchParams;
+const requestedDate = params.get("date") ?? "";
+const date = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : today();
+const library = params.get("library") ?? "";
+const minCapacityRaw = params.get("minCapacity") ?? "";
+const minCapacity = minCapacityRaw ? Number(minCapacityRaw) : undefined;
+
+const rooms = listRooms({
+  library: library || undefined,
+  minCapacity: minCapacity !== undefined && Number.isFinite(minCapacity) ? minCapacity : undefined,
+});
+const bookedSlots = new Set(listBookingsForDate(date).map((booking) => `${booking.roomId}:${booking.slot}`));
+const slots = Array.from({ length: CLOSING_HOUR - OPENING_HOUR }, (_, i) => OPENING_HOUR + i);
 ---
 
 <!doctype html>
@@ -10,44 +24,77 @@ const messages = listMessages();
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>COMP4020 prototype</title>
+    <title>Room availability</title>
   </head>
   <body>
     <nav aria-label="site">
-      <a href="/">Guestbook</a>
+      <a href="/">Availability</a>
+      <a href="/bookings">My bookings</a>
       <a href="/readme/">About</a>
     </nav>
     <main>
-      <h1>Guestbook</h1>
+      <h1>Room availability</h1>
       <p>
-        A minimal full-stack starter: messages live in SQLite on the machine's
-        volume (state survives a reload and a redeploy), and new messages
-        appear in every open tab over a server-sent-events stream — open this
-        page twice and sign it in one. Replace all of this with your own
-        prototype.
+        Every group study room across Chifley, Hancock, Menzies and Law, in one
+        grid. Filter, then click a free slot to book it — no login required to
+        look.
       </p>
-      <form method="post" action="/api/messages">
-        <label for="body">Leave a message</label>
-        <input id="body" name="body" required maxlength="500" />
-        <button>Sign</button>
+      <form method="get">
+        <label>
+          Date
+          <input type="date" name="date" value={date} />
+        </label>
+        <label>
+          Library
+          <select name="library">
+            <option value="" selected={library === ""}>All libraries</option>
+            {
+              LIBRARIES.map((lib) => (
+                <option value={lib} selected={library === lib}>
+                  {lib}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+        <label>
+          Min. capacity
+          <input type="number" name="minCapacity" min="1" value={minCapacityRaw} />
+        </label>
+        <button type="submit">Filter</button>
       </form>
-      <ul id="messages">
-        {messages.map((message) => <li>{message.body}</li>)}
-      </ul>
+
+      {
+        rooms.length === 0 ? (
+          <p>No rooms match those filters.</p>
+        ) : (
+          <table>
+            <caption>Availability for {date}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Room</th>
+                {slots.map((slot) => (
+                  <th scope="col">{slot}:00</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rooms.map((room) => (
+                <tr>
+                  <th scope="row">
+                    {room.name} — {room.library} (cap. {room.capacity}
+                    {room.equipment ? `, ${room.equipment.replaceAll(",", ", ")}` : ""})
+                  </th>
+                  {slots.map((slot) => {
+                    const booked = bookedSlots.has(`${room.id}:${slot}`);
+                    return <td>{booked ? "Booked" : <a href={`/book?room=${room.id}&date=${date}&slot=${slot}`}>Book</a>}</td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      }
     </main>
-    <script>
-      // The live half of the demo: subscribe to the SSE stream and prepend
-      // messages as they arrive. The form itself needs none of this — its
-      // POST + redirect re-renders the submitting tab from SQLite; this
-      // stream is how every other tab finds out.
-      const list = document.querySelector("#messages");
-      const source = new EventSource("/api/events");
-      source.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data);
-        const item = document.createElement("li");
-        item.textContent = message.body;
-        list?.prepend(item);
-      });
-    </script>
   </body>
 </html>

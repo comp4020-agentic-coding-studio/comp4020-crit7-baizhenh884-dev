@@ -70,8 +70,10 @@ function expectBookingFails(res: Response, code: string): void {
   expect(locationParam(res, "error")).toBe(code);
 }
 
+// Astro (correctly) HTML-escapes "&" to "&amp;" inside an href attribute, so
+// that's what the served page actually contains.
 function bookLink(roomId: number, date: string, slot: number): string {
-  return `/book?room=${roomId}&date=${date}&slot=${slot}`;
+  return `/book?room=${roomId}&amp;date=${date}&amp;slot=${slot}`;
 }
 
 async function gridHasLink(date: string, link: string): Promise<boolean> {
