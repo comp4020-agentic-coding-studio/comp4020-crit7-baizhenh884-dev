@@ -20,6 +20,7 @@ export class BookingError extends Error {
 
 export const ERROR_MESSAGES: Record<string, string> = {
   missing_fields: "Enter your name and ANU email.",
+  invalid_date: "That isn't a valid date.",
   out_of_window: `Rooms can only be booked from today up to ${MAX_DAYS_AHEAD} days ahead.`,
   past_slot: "That time slot has already started.",
   invalid_slot: "That isn't a bookable time slot.",
@@ -50,6 +51,15 @@ function datePlusDays(dateStr: string, days: number): string {
   const noon = new Date(Date.UTC(y, m - 1, d, 12));
   noon.setUTCDate(noon.getUTCDate() + days);
   return dateFmt.format(noon);
+}
+
+// Dates are compared and indexed as strings, so anything but an exact, real
+// YYYY-MM-DD would slip past the unique index and the daily cap.
+function isRealDate(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const [y, m, d] = date.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  return utc.getUTCFullYear() === y && utc.getUTCMonth() === m - 1 && utc.getUTCDate() === d;
 }
 
 export function isDateBookable(date: string): boolean {
@@ -93,6 +103,9 @@ export function createBooking(input: { roomId: number; date: string; slot: numbe
 
   if (!name || !email) {
     throw new BookingError("missing_fields", ERROR_MESSAGES.missing_fields);
+  }
+  if (!isRealDate(input.date)) {
+    throw new BookingError("invalid_date", ERROR_MESSAGES.invalid_date);
   }
   if (!isDateBookable(input.date)) {
     throw new BookingError("out_of_window", ERROR_MESSAGES.out_of_window);
