@@ -52,7 +52,7 @@ function datePlusDays(dateStr: string, days: number): string {
   return dateFmt.format(noon);
 }
 
-function isDateBookable(date: string): boolean {
+export function isDateBookable(date: string): boolean {
   const earliest = today();
   const latest = datePlusDays(earliest, MAX_DAYS_AHEAD);
   return date >= earliest && date <= latest;

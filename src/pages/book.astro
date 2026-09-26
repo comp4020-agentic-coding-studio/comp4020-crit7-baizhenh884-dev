@@ -12,6 +12,7 @@ const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? "Something went w
 
 const room = Number.isInteger(roomId) ? listRooms().find((r) => r.id === roomId) : undefined;
 const hasTarget = room !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isInteger(slot);
+const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 ---
 
 <!doctype html>
@@ -34,24 +35,31 @@ const hasTarget = room !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(date) && Numb
           <p>Pick a free slot from the <a href="/">availability grid</a> to book it.</p>
         ) : (
           <>
-            <p>
-              {room!.name} — {room!.library}, {date} at {slot}:00–{slot + 1}:00
-            </p>
-            {errorMessage && <p role="alert">{errorMessage}</p>}
-            <form method="post" action="/api/bookings">
-              <input type="hidden" name="roomId" value={room!.id} />
-              <input type="hidden" name="date" value={date} />
-              <input type="hidden" name="slot" value={slot} />
-              <label>
-                Name
-                <input type="text" name="name" required />
-              </label>
-              <label>
-                ANU email
-                <input type="email" name="email" required />
-              </label>
-              <button type="submit">Confirm booking</button>
-            </form>
+            {errorMessage && <p role="alert" class="error">{errorMessage}</p>}
+            <div class="card">
+              <p class="target">{room!.name}</p>
+              <p class="target-meta">
+                {room!.library} · {room!.capacity} seats{room!.equipment ? ` · ${room!.equipment.replaceAll(",", ", ")}` : ""}
+              </p>
+              <p class="target-meta">
+                {date}, {hh(slot)}–{hh(slot + 1)}
+              </p>
+              <form method="post" action="/api/bookings">
+                <input type="hidden" name="roomId" value={room!.id} />
+                <input type="hidden" name="date" value={date} />
+                <input type="hidden" name="slot" value={slot} />
+                <label>
+                  Name
+                  <input type="text" name="name" autocomplete="name" required />
+                </label>
+                <label>
+                  ANU email
+                  <input type="email" name="email" autocomplete="email" required />
+                </label>
+                <button type="submit">Confirm booking</button>
+              </form>
+            </div>
+            <p><a href={`/?date=${date}`}>← Back to the grid</a></p>
           </>
         )
       }

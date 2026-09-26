@@ -1,5 +1,13 @@
 ---
-import { CLOSING_HOUR, listBookingsForDate, listRooms, OPENING_HOUR, today } from "../lib/bookings";
+import {
+  CLOSING_HOUR,
+  currentSydneyHour,
+  isDateBookable,
+  listBookingsForDate,
+  listRooms,
+  OPENING_HOUR,
+  today,
+} from "../lib/bookings";
 import "../styles.css";
 
 const LIBRARIES = ["Chifley", "Hancock", "Menzies", "Law"];
@@ -15,8 +23,20 @@ const rooms = listRooms({
   library: library || undefined,
   minCapacity: minCapacity !== undefined && Number.isFinite(minCapacity) ? minCapacity : undefined,
 });
+const groups = LIBRARIES.map((lib) => ({ lib, rooms: rooms.filter((room) => room.library === lib) })).filter(
+  (group) => group.rooms.length > 0,
+);
 const bookedSlots = new Set(listBookingsForDate(date).map((booking) => `${booking.roomId}:${booking.slot}`));
 const slots = Array.from({ length: CLOSING_HOUR - OPENING_HOUR }, (_, i) => OPENING_HOUR + i);
+
+// Mirrors the server's own rules so the grid never offers a slot createBooking would reject.
+const dateOpen = isDateBookable(date);
+const isToday = date === today();
+const nowHour = currentSydneyHour();
+const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour);
+
+const shortName = (name: string, lib: string) => (name.startsWith(`${lib} `) ? name.slice(lib.length + 1) : name);
+const hh = (slot: number) => `${String(slot).padStart(2, "0")}:00`;
 ---
 
 <!doctype html>
@@ -28,24 +48,23 @@ const slots = Array.from({ length: CLOSING_HOUR - OPENING_HOUR }, (_, i) => OPEN
   </head>
   <body>
     <nav aria-label="site">
-      <a href="/">Availability</a>
+      <a href="/" aria-current="page">Availability</a>
       <a href="/bookings">My bookings</a>
       <a href="/readme/">About</a>
     </nav>
-    <main>
+    <main class="wide">
       <h1>Room availability</h1>
-      <p>
-        Every group study room across Chifley, Hancock, Menzies and Law, in one
-        grid. Filter, then click a free slot to book it — no login required to
-        look.
+      <p class="lede">
+        Every group study room across Chifley, Hancock, Menzies and Law, in one grid. Filter, then pick a free
+        slot to book it.
       </p>
-      <form method="get">
+      <form method="get" class="filters">
         <label>
-          Date
+          <span>Date</span>
           <input type="date" name="date" value={date} />
         </label>
         <label>
-          Library
+          <span>Library</span>
           <select name="library">
             <option value="" selected={library === ""}>All libraries</option>
             {
@@ -58,41 +77,82 @@ const slots = Array.from({ length: CLOSING_HOUR - OPENING_HOUR }, (_, i) => OPEN
           </select>
         </label>
         <label>
-          Min. capacity
+          <span>Min. seats</span>
           <input type="number" name="minCapacity" min="1" value={minCapacityRaw} />
         </label>
         <button type="submit">Filter</button>
       </form>
 
       {
-        rooms.length === 0 ? (
+        groups.length === 0 ? (
           <p>No rooms match those filters.</p>
         ) : (
-          <table>
-            <caption>Availability for {date}</caption>
-            <thead>
-              <tr>
-                <th scope="col">Room</th>
-                {slots.map((slot) => (
-                  <th scope="col">{slot}:00</th>
+          <>
+            <ul class="legend" aria-label="Legend">
+              <li><span class="swatch slot-free" aria-hidden="true"></span>Free</li>
+              <li><span class="swatch slot-booked" aria-hidden="true"></span>Booked</li>
+              <li><span class="swatch slot-past" aria-hidden="true"></span>Unavailable</li>
+            </ul>
+            {!dateOpen && (
+              <p class="notice">Bookings are only open from today up to 14 days ahead, so nothing on {date} can be booked.</p>
+            )}
+            <div class="grid-scroll" role="region" aria-label={`Availability for ${date}`} tabindex="0">
+              <table class="grid">
+                <caption class="visually-hidden">Availability for {date}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="corner">Room</th>
+                    {slots.map((slot) => (
+                      <th scope="col">{hh(slot)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                {groups.map((group) => (
+                  <tbody>
+                    <tr class="library-row">
+                      <th scope="rowgroup" colspan={slots.length + 1}>
+                        <span>{group.lib}</span>
+                      </th>
+                    </tr>
+                    {group.rooms.map((room) => {
+                      const label = [
+                        shortName(room.name, room.library),
+                        `${room.capacity} seats`,
+                        ...(room.equipment ? [room.equipment.replaceAll(",", ", ")] : []),
+                      ].join(" · ");
+                      return (
+                        <tr>
+                          <th scope="row" class="room">{label}</th>
+                          {slots.map((slot) => {
+                            if (bookedSlots.has(`${room.id}:${slot}`)) {
+                              return <td><span class="slot slot-booked">Booked</span></td>;
+                            }
+                            if (isUnavailable(slot)) {
+                              return (
+                                <td>
+                                  <span class="slot slot-past">
+                                    <span aria-hidden="true">–</span>
+                                    <span class="visually-hidden">Unavailable</span>
+                                  </span>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td>
+                                <a class="slot slot-free" href={`/book?room=${room.id}&date=${date}&slot=${slot}`}>
+                                  Free<span class="visually-hidden"> — book {room.name} at {hh(slot)}</span>
+                                </a>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rooms.map((room) => (
-                <tr>
-                  <th scope="row">
-                    {room.name} — {room.library} (cap. {room.capacity}
-                    {room.equipment ? `, ${room.equipment.replaceAll(",", ", ")}` : ""})
-                  </th>
-                  {slots.map((slot) => {
-                    const booked = bookedSlots.has(`${room.id}:${slot}`);
-                    return <td>{booked ? "Booked" : <a href={`/book?room=${room.id}&date=${date}&slot=${slot}`}>Book</a>}</td>;
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </table>
+            </div>
+          </>
         )
       }
     </main>

@@ -11,6 +11,7 @@ const rooms = new Map(listRooms().map((room) => [room.id, room]));
 const myBookings = email
   ? listBookingsForEmail(email).sort((a, b) => (a.date === b.date ? a.slot - b.slot : a.date < b.date ? -1 : 1))
   : [];
+const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 ---
 
 <!doctype html>
@@ -23,34 +24,30 @@ const myBookings = email
   <body>
     <nav aria-label="site">
       <a href="/">Availability</a>
-      <a href="/bookings">My bookings</a>
+      <a href="/bookings" aria-current="page">My bookings</a>
       <a href="/readme/">About</a>
     </nav>
     <main>
       <h1>My bookings</h1>
-      <form method="get">
+      <form method="get" class="filters">
         <label>
           ANU email
-          <input type="email" name="email" value={email} required />
+          <input type="email" name="email" value={email} autocomplete="email" required />
         </label>
         <button type="submit">Show my bookings</button>
       </form>
-      {errorMessage && <p role="alert">{errorMessage}</p>}
-      {
-        email && myBookings.length === 0 && !errorMessage && (
-          <p>No bookings found for {email}.</p>
-        )
-      }
+      {errorMessage && <p role="alert" class="error">{errorMessage}</p>}
+      {email && myBookings.length === 0 && !errorMessage && <p class="notice">No bookings found for {email}.</p>}
       {
         myBookings.length > 0 && (
-          <table>
-            <caption>Bookings for {email}</caption>
+          <table class="list">
+            <caption class="visually-hidden">Bookings for {email}</caption>
             <thead>
               <tr>
                 <th scope="col">Room</th>
                 <th scope="col">Date</th>
                 <th scope="col">Time</th>
-                <th scope="col"></th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -61,13 +58,13 @@ const myBookings = email
                     <td>{room ? `${room.name} — ${room.library}` : `Room ${booking.roomId}`}</td>
                     <td>{booking.date}</td>
                     <td>
-                      {booking.slot}:00–{booking.slot + 1}:00
+                      {hh(booking.slot)}–{hh(booking.slot + 1)}
                     </td>
                     <td>
                       <form method="post" action="/api/bookings/cancel">
                         <input type="hidden" name="id" value={booking.id} />
                         <input type="hidden" name="email" value={email} />
-                        <button type="submit">Cancel</button>
+                        <button type="submit" class="secondary">Cancel</button>
                       </form>
                     </td>
                   </tr>
