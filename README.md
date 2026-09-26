@@ -2,12 +2,15 @@
 
 A cross-library group study room booking prototype. Right now, checking room
 availability at ANU Library means visiting four separate LibCal pages (one per
-library), each behind SSO, none showing capacity or equipment up front, and
-none of them documenting how many hours you're allowed to book per day. This
-app puts every room from all four libraries — Chifley, Hancock, Menzies, Law —
-in one filterable grid, lets you book a free slot with just a name and email,
-and lets you look up or cancel your own bookings later by re-entering that
-email. No login is required to browse or to book.
+library); you have to log in with ANU SSO before you can see availability, and
+room details sit behind a per-room "Info" button. The booking rules —
+LibCal's page says you can book "up to two hours a day" and "up to two weeks
+in advance" — exist only as text on the page: nothing tells you a booking
+would break them until you try. This app puts every room from
+all four libraries — Chifley, Hancock, Menzies, Law — in one filterable grid,
+greys out anything you can't book, lets you book a free slot with just a name
+and email, and takes you straight to your bookings afterwards, where you can
+cancel. No login is required to browse or to book.
 
 ## What good looks like here
 
@@ -19,13 +22,14 @@ directly against the API, not only through the rendered forms:
   database's own unique index is the source of truth, not just an
   application-level check, so it holds even under two near-simultaneous
   requests.
-- **A 2-hour daily cap per person.** Counted per (trimmed, lowercased) email
-  per Sydney calendar day, so `Test@anu.edu.au` and `test@ANU.edu.au` share one
-  cap, and the count-then-insert is one atomic transaction so two
-  near-simultaneous bookings can't both slip past the limit.
-- **A 14-day booking window.** Only today through 14 days ahead is bookable,
-  computed against `Australia/Sydney`, not the server's or your browser's own
-  clock — that matters because this runs on a UTC container.
+- **A 2-hour daily cap per person**, taken from LibCal's own rule. Counted per
+  (trimmed, lowercased) email per Sydney calendar day, so `Test@anu.edu.au` and
+  `test@ANU.edu.au` share one cap, and the count-then-insert is one atomic
+  transaction so two near-simultaneous bookings can't both slip past the limit.
+- **A 14-day booking window**, LibCal's "two weeks in advance". Only today
+  through 14 days ahead is bookable, computed against `Australia/Sydney`, not
+  the server's or your browser's own clock — that matters because this runs on
+  a UTC container.
 - **No booking a slot that's already started**, again computed in Sydney time.
 - **Clear, stable error codes** (`slot_taken`, `daily_cap`, `out_of_window`,
   `past_slot`, `email_mismatch`, ...) rather than one generic failure message,
@@ -52,3 +56,10 @@ bookings; no email confirmation. All out of scope for a one-week prototype.
   `/bookings` — there's no SSO, password, or confirmation link tying an email
   to the person who actually owns it. A real deployment would need to fix
   this before handling genuine bookings.
+- **The remembered email is a convenience, not a login.** After you book or
+  look up your bookings, your email is kept in a cookie for 30 days so you
+  don't have to retype it, and "Not you?" clears it. It proves nothing about
+  who you are.
+- **Opening hours are simplified to 08:00–22:00 for every library.** In
+  reality Chifley and Hancock are open 24 hours; one shared set of hourly
+  slots kept the grid simple for this prototype.
