@@ -46,11 +46,13 @@ Read them before you plan or build.
   about renames, so a schema change that both drops and adds tables is
   generated as two migrations: drop first, then create.
 - **Rules live on the server and in the database, not only in the UI.** No
-  double booking is enforced by the unique index on (room, date, slot);
-  foreign keys are on. The limits are 2 hours per email per day (email
-  trimmed and lowercased, with count and insert in one `db.transaction()`),
-  today to 14 days ahead, and no slot that has already started. The UI may
-  mirror these rules, but must never be the only place they are enforced.
+  double booking is enforced by the unique index on (room, date, slot), which
+  only holds because `createBooking` first rejects any date that isn't a real
+  `YYYY-MM-DD` (`invalid_date`); foreign keys are on. The limits are 2 hours
+  per email per day (email trimmed and lowercased, with count and insert in one
+  `db.transaction()`), today to 14 days ahead, and no slot that has already
+  started. The UI may mirror these rules, but must never be the only place
+  they are enforced.
 - **All dates and times the rules or users see are Australia/Sydney**,
   computed with `Intl.DateTimeFormat`, never the machine's clock. Fly and CI
   run in UTC.
