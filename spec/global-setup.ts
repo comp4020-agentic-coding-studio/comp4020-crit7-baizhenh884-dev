@@ -4,6 +4,7 @@ import { type AddressInfo, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TestProject } from "vitest/node";
+import { FIXTURE_BOOKING } from "./routes";
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -51,6 +52,26 @@ export default async function setup(project: TestProject): Promise<() => void> {
       throw new Error(`server did not come up at ${baseUrl}`);
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  // The invariants' /bookings route needs a booking to render its table and
+  // success banner; make it over HTTP, the same way a person would.
+  const fixture = await fetch(new URL("/api/bookings", baseUrl), {
+    method: "POST",
+    headers: { origin: baseUrl },
+    body: new URLSearchParams({
+      roomId: String(FIXTURE_BOOKING.roomId),
+      date: FIXTURE_BOOKING.date,
+      slot: String(FIXTURE_BOOKING.slot),
+      name: "Invariants Fixture",
+      email: FIXTURE_BOOKING.email,
+    }),
+    redirect: "manual",
+  });
+  const location = fixture.headers.get("location") ?? "";
+  if (!location.includes(`booked=${FIXTURE_BOOKING.id}`)) {
+    server.kill();
+    throw new Error(`fixture booking failed (${fixture.status} → ${location})`);
   }
 
   project.provide("baseUrl", baseUrl);
