@@ -28,7 +28,8 @@ minutes without stopping. The plan was solid enough that it worked, but I
 only reviewed the result at the end, which is why the usability problems
 surfaced late. It confirmed why I normally work in stages; next time I'll
 write checkpoints into the approval itself (e.g. "stop after the schema
-commit"), not just rely on remembering to pause.
+commit"), not just rely on remembering to pause. For the audit fixes that
+followed, I wrote two checkpoints into the approval.
 
 Next, I'd add real ANU sign-in so bookings aren't looked up by email alone,
 and show each library's real opening hours.
