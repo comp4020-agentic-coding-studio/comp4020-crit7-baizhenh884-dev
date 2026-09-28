@@ -18,10 +18,11 @@ Good, here, means the booking rules are enforced by the server and the
 database — not just by the UI — and that they hold under HTTP requests made
 directly against the API, not only through the rendered forms:
 
-- **No double booking.** A room/date/hour combination can be booked once; the
-  database's own unique index is the source of truth, not just an
-  application-level check, so it holds even under two near-simultaneous
-  requests.
+- **No double booking.** A room/date/hour combination can be booked once. The
+  server first requires a real `YYYY-MM-DD` date (anything else is rejected as
+  `invalid_date`, so a variant spelling of the same day can't get its own
+  slot), and the database's unique index then allows one booking per slot,
+  even under two near-simultaneous requests.
 - **A 2-hour daily cap per person**, taken from LibCal's own rule. Counted per
   (trimmed, lowercased) email per Sydney calendar day, so `Test@anu.edu.au` and
   `test@ANU.edu.au` share one cap, and the count-then-insert is one atomic
@@ -31,9 +32,9 @@ directly against the API, not only through the rendered forms:
   the server's or your browser's own clock — that matters because this runs on
   a UTC container.
 - **No booking a slot that's already started**, again computed in Sydney time.
-- **Clear, stable error codes** (`slot_taken`, `daily_cap`, `out_of_window`,
-  `past_slot`, `email_mismatch`, ...) rather than one generic failure message,
-  so a rejected booking tells you which rule stopped it.
+- **Clear, stable error codes** (`slot_taken`, `daily_cap`, `invalid_date`,
+  `out_of_window`, `past_slot`, `email_mismatch`, ...) rather than one generic
+  failure message, so a rejected booking tells you which rule stopped it.
 
 These rules, and the tests that hold them to it end-to-end over HTTP (booking,
 rejecting a double-booking, rejecting a third hour, rejecting an out-of-window
@@ -60,6 +61,8 @@ bookings; no email confirmation. All out of scope for a one-week prototype.
   look up your bookings, your email is kept in a cookie for 30 days so you
   don't have to retype it, and "Not you?" clears it. It proves nothing about
   who you are.
+- **My bookings also shows past bookings.** The page lists every booking for
+  that email, including ones whose time has already passed.
 - **Opening hours are simplified to 08:00–22:00 for every library.** In
   reality Chifley and Hancock are open 24 hours; one shared set of hourly
   slots kept the grid simple for this prototype.
