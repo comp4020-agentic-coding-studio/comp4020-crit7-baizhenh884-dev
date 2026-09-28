@@ -197,6 +197,34 @@ describe("bookings", () => {
     });
   });
 
+  describe("other rejections", () => {
+    const tomorrow = () => sydneyDatePlusDays(sydneyToday(), 1);
+
+    it("rejects a booking with no name as missing_fields", async () => {
+      const res = await post(
+        "/api/bookings",
+        bookingParams({ roomId: rooms[10].id, date: tomorrow(), slot: 10, email: uniqueEmail(), name: "  " }),
+      );
+      expectBookingFails(res, "missing_fields");
+    });
+
+    it("rejects a slot outside opening hours as invalid_slot", async () => {
+      const res = await post("/api/bookings", bookingParams({ roomId: rooms[10].id, date: tomorrow(), slot: 22, email: uniqueEmail() }));
+      expectBookingFails(res, "invalid_slot");
+    });
+
+    it("rejects a room that doesn't exist as unknown_room", async () => {
+      const res = await post("/api/bookings", bookingParams({ roomId: 999999, date: tomorrow(), slot: 10, email: uniqueEmail() }));
+      expectBookingFails(res, "unknown_room");
+    });
+
+    it("rejects cancelling a booking that doesn't exist as not_found", async () => {
+      const res = await post("/api/bookings/cancel", new URLSearchParams({ id: "999999", email: uniqueEmail() }));
+      expect(res.status).toBe(303);
+      expect(locationParam(res, "error")).toBe("not_found");
+    });
+  });
+
   describe("grid outside the booking window", () => {
     it.each([
       ["yesterday", -1],
