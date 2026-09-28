@@ -225,6 +225,16 @@ describe("bookings", () => {
     });
   });
 
+  describe("error redirect", () => {
+    it("can't be steered by what the form submits", async () => {
+      const date = "2020-01-01&error=slot_taken&x=";
+      const res = await post("/api/bookings", bookingParams({ roomId: rooms[10].id, date, slot: 9, email: uniqueEmail() }));
+
+      expectBookingFails(res, "invalid_date");
+      expect(locationParam(res, "date")).toBe(date);
+    });
+  });
+
   describe("grid outside the booking window", () => {
     it.each([
       ["yesterday", -1],
