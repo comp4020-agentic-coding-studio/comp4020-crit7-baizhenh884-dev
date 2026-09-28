@@ -25,7 +25,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   past_slot: "That time slot has already started.",
   invalid_slot: "That isn't a bookable time slot.",
   unknown_room: "That room doesn't exist.",
-  daily_cap: `You've already booked ${MAX_HOURS_PER_DAY} hours today — that's the limit per person per day.`,
+  daily_cap: `You've already booked ${MAX_HOURS_PER_DAY} hours that day — that's the limit per person per day.`,
   slot_taken: "Someone else just booked that slot. Pick another.",
   email_mismatch: "That booking doesn't belong to this email.",
   not_found: "That booking doesn't exist — it may already be cancelled.",
