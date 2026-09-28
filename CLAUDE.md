@@ -27,6 +27,12 @@ Read them before you plan or build.
   `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baizhenh884-dev`,
   then verify the change on the live URL, including by using it by hand. Green
   tests prove the rules, not that the site is usable.
+- **Keep the site's links finite.** CI's deploy job crawls every same-site link
+  with `linkinator --recurse` under a 10-minute limit, and it only runs once
+  the repo is public. Any change that adds links must keep the set of
+  reachable pages finite, and the same crawl
+  (`pnpm dlx linkinator <local URL> --recurse --skip "^(?!<local URL>)"`) is
+  run against a local build before pushing, with its page count reported.
 - Open pages in a browser and look at them. The rendered page is the truth;
   your mental model of it isn't.
 - **Check contrast in a real browser.** The invariants run axe in jsdom with
