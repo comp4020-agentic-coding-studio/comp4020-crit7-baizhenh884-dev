@@ -248,6 +248,33 @@ describe("bookings", () => {
     });
   });
 
+  describe("grid date links", () => {
+    // CI's link check crawls every same-site link, so a grid that links one day
+    // further on every page makes the site infinite. Date links must stay
+    // inside the booking window.
+    function linkedDates(html: string): string[] {
+      return [...html.matchAll(/href="\/\?([^"]*)"/g)]
+        .map((m) => new URLSearchParams(m[1].replaceAll("&amp;", "&")).get("date"))
+        .filter((d): d is string => d !== null);
+    }
+
+    it.each([
+      ["today", 0],
+      ["today+14", 14],
+      ["yesterday", -1],
+    ])("only link to dates in the booking window from %s", async (_label, days) => {
+      const today = sydneyToday();
+      const last = sydneyDatePlusDays(today, 14);
+      const html = await (await fetch(new URL(`/?date=${sydneyDatePlusDays(today, days)}`, baseUrl))).text();
+      const dates = linkedDates(html);
+
+      expect(dates.length, "the grid should offer some date links").toBeGreaterThan(0);
+      for (const d of dates) {
+        expect(d >= today && d <= last, `${d} is outside ${today}..${last}`).toBe(true);
+      }
+    });
+  });
+
   describe("cancellation", () => {
     it("persists once cancelled, and requires the booking's own email", async () => {
       const room = rooms[6];
