@@ -46,7 +46,7 @@ export function currentSydneyHour(): number {
 // date at UTC noon (always mid-evening in Sydney, never near a local
 // midnight) before shifting keeps this correct across a Sydney DST
 // transition, unlike adding N*86400000ms to the current instant.
-function datePlusDays(dateStr: string, days: number): string {
+export function datePlusDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const noon = new Date(Date.UTC(y, m - 1, d, 12));
   noon.setUTCDate(noon.getUTCDate() + days);

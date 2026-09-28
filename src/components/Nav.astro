@@ -11,8 +11,13 @@ const email = Astro.props.email ?? rememberedEmail(Astro.cookies);
 const here = (page: Props["current"]) => (current === page ? "page" : undefined);
 ---
 
-<nav aria-label="site">
-  <a href="/" aria-current={here("availability")}>Availability</a>
-  <a href={bookingsHref(email)} aria-current={here("bookings")}>My bookings</a>
-  <a href="/readme/" aria-current={here("about")}>About</a>
-</nav>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="site-name" href="/">ANU Study Rooms</a>
+    <nav aria-label="site">
+      <a href="/" aria-current={here("availability")}>Availability</a>
+      <a href={bookingsHref(email)} aria-current={here("bookings")}>My bookings</a>
+      <a href="/readme/" aria-current={here("about")}>About</a>
+    </nav>
+  </div>
+</header>

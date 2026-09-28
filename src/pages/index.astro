@@ -2,6 +2,7 @@
 import {
   CLOSING_HOUR,
   currentSydneyHour,
+  datePlusDays,
   isDateBookable,
   listBookingsForDate,
   listRooms,
@@ -9,7 +10,7 @@ import {
   today,
 } from "../lib/bookings";
 import Nav from "../components/Nav.astro";
-import { hh, shortRoomName } from "../lib/format";
+import { friendlyDate, hh, libraryClass, plural, shortRoomName, slotRange } from "../lib/format";
 import "../styles.css";
 
 const LIBRARIES = ["Chifley", "Hancock", "Menzies", "Law"];
@@ -32,11 +33,28 @@ const bookedSlots = new Set(listBookingsForDate(date).map((booking) => `${bookin
 const slots = Array.from({ length: CLOSING_HOUR - OPENING_HOUR }, (_, i) => OPENING_HOUR + i);
 
 // Mirrors the server's own rules so the grid never offers a slot createBooking would reject.
+const todayStr = today();
 const dateOpen = isDateBookable(date);
-const isToday = date === today();
+const isToday = date === todayStr;
 const nowHour = currentSydneyHour();
 const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour);
+const nowSlot = isToday && nowHour >= OPENING_HOUR && nowHour < CLOSING_HOUR ? nowHour : undefined;
 
+const freeCount = rooms.reduce(
+  (total, room) =>
+    total + slots.filter((slot) => !bookedSlots.has(`${room.id}:${slot}`) && !isUnavailable(slot)).length,
+  0,
+);
+
+// Date shortcuts keep whatever library / seat filters are already applied.
+const realDate = friendlyDate(date) !== date;
+const dateHref = (target: string) => {
+  const query = new URLSearchParams({ date: target });
+  if (library) query.set("library", library);
+  if (minCapacityRaw) query.set("minCapacity", minCapacityRaw);
+  return `/?${query}`;
+};
+const tomorrowStr = datePlusDays(todayStr, 1);
 ---
 
 <!doctype html>
@@ -55,10 +73,18 @@ const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour
         slot to book it.
       </p>
       <form method="get" class="filters">
-        <label>
-          <span>Date</span>
-          <input type="date" name="date" value={date} />
-        </label>
+        <div class="date-field">
+          <label>
+            <span>Date</span>
+            <input type="date" name="date" value={date} />
+          </label>
+          <nav class="date-nav" aria-label="Change date">
+            {realDate && <a href={dateHref(datePlusDays(date, -1))} aria-label="Previous day">‹</a>}
+            <a href={dateHref(todayStr)} aria-current={isToday ? "date" : undefined}>Today</a>
+            <a href={dateHref(tomorrowStr)} aria-current={date === tomorrowStr ? "date" : undefined}>Tomorrow</a>
+            {realDate && <a href={dateHref(datePlusDays(date, 1))} aria-label="Next day">›</a>}
+          </nav>
+        </div>
         <label>
           <span>Library</span>
           <select name="library">
@@ -81,16 +107,24 @@ const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour
 
       {
         groups.length === 0 ? (
-          <p>No rooms match those filters.</p>
+          <div class="card empty">
+            <p>No rooms match those filters.</p>
+            <p><a href={`/?date=${date}`}>Clear filters</a></p>
+          </div>
         ) : (
           <>
-            <ul class="legend" aria-label="Legend">
-              <li><span class="swatch slot-free" aria-hidden="true"></span>Free</li>
-              <li><span class="swatch slot-booked" aria-hidden="true"></span>Booked</li>
-              <li><span class="swatch slot-past" aria-hidden="true"></span>Unavailable</li>
-            </ul>
+            <div class="grid-meta">
+              <p class="summary">
+                <strong>{plural(rooms.length, "room")}</strong> · <strong>{plural(freeCount, "free slot")}</strong> on {friendlyDate(date)}
+              </p>
+              <ul class="legend" aria-label="Legend">
+                <li><span class="swatch slot-free" aria-hidden="true"></span>Free</li>
+                <li><span class="swatch slot-booked" aria-hidden="true"></span>Booked</li>
+                <li><span class="swatch slot-past" aria-hidden="true"></span>Unavailable</li>
+              </ul>
+            </div>
             {!dateOpen && (
-              <p class="notice">Bookings are only open from today up to 14 days ahead, so nothing on {date} can be booked.</p>
+              <p class="notice">Bookings are only open from today up to 14 days ahead, so nothing on {friendlyDate(date)} can be booked.</p>
             )}
             <div class="grid-scroll" role="region" aria-label={`Availability for ${date}`} tabindex="0">
               <table class="grid">
@@ -99,20 +133,27 @@ const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour
                   <tr>
                     <th scope="col" class="corner">Room</th>
                     {slots.map((slot) => (
-                      <th scope="col">{hh(slot)}</th>
+                      <th scope="col" class={slot === nowSlot ? "now" : undefined}>
+                        {hh(slot)}
+                        {slot === nowSlot && <span class="now-badge">now</span>}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 {groups.map((group) => (
-                  <tbody>
+                  <tbody class={libraryClass(group.lib)}>
                     <tr class="library-row">
                       <th scope="rowgroup" colspan={slots.length + 1}>
-                        <span>{group.lib}</span>
+                        <span>
+                          <span class="lib-tag">{group.lib}</span>
+                          <span class="lib-count">{plural(group.rooms.length, "room")}</span>
+                        </span>
                       </th>
                     </tr>
                     {group.rooms.map((room) => {
+                      const short = shortRoomName(room.name, room.library);
                       const label = [
-                        shortRoomName(room.name, room.library),
+                        short,
                         `${room.capacity} seats`,
                         ...(room.equipment ? [room.equipment.replaceAll(",", ", ")] : []),
                       ].join(" · ");
@@ -120,12 +161,13 @@ const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour
                         <tr>
                           <th scope="row" class="room">{label}</th>
                           {slots.map((slot) => {
+                            const now = slot === nowSlot ? "now-col" : undefined;
                             if (bookedSlots.has(`${room.id}:${slot}`)) {
-                              return <td><span class="slot slot-booked">Booked</span></td>;
+                              return <td class={now}><span class="slot slot-booked">Booked</span></td>;
                             }
                             if (isUnavailable(slot)) {
                               return (
-                                <td>
+                                <td class={now}>
                                   <span class="slot slot-past">
                                     <span aria-hidden="true">–</span>
                                     <span class="visually-hidden">Unavailable</span>
@@ -135,7 +177,11 @@ const isUnavailable = (slot: number) => !dateOpen || (isToday && slot <= nowHour
                             }
                             return (
                               <td>
-                                <a class="slot slot-free" href={`/book?room=${room.id}&date=${date}&slot=${slot}`}>
+                                <a
+                                  class="slot slot-free"
+                                  href={`/book?room=${room.id}&date=${date}&slot=${slot}`}
+                                  title={`${short} · ${slotRange(slot)}`}
+                                >
                                   Free<span class="visually-hidden"> — book {room.name} at {hh(slot)}</span>
                                 </a>
                               </td>

@@ -17,3 +17,21 @@ export function shortDate(date: string): string {
   const [, m, d] = date.split("-").map(Number);
   return `${d} ${MONTHS[m - 1]}`;
 }
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// "Mon 28 Sep"; anything that isn't a real date is shown as typed.
+export function friendlyDate(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  if (utc.getUTCFullYear() !== y || utc.getUTCMonth() !== m - 1 || utc.getUTCDate() !== d) return date;
+  return `${WEEKDAYS[utc.getUTCDay()]} ${d} ${MONTHS[m - 1]}`;
+}
+
+export function libraryClass(library: string): string {
+  return `lib-${library.toLowerCase()}`;
+}
+
+export function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}

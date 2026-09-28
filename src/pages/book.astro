@@ -1,7 +1,7 @@
 ---
 import Nav from "../components/Nav.astro";
 import { ERROR_MESSAGES, listRooms } from "../lib/bookings";
-import { slotRange } from "../lib/format";
+import { friendlyDate, libraryClass, slotRange } from "../lib/format";
 import { rememberedEmail } from "../lib/remember";
 import "../styles.css";
 
@@ -37,13 +37,14 @@ const here = `${Astro.url.pathname}${Astro.url.search}`;
         ) : (
           <>
             {errorMessage && <p role="alert" class="error">{errorMessage}</p>}
-            <div class="card">
+            <div class={`card booking-card ${libraryClass(room!.library)}`}>
+              <span class="lib-tag">{room!.library}</span>
               <p class="target">{room!.name}</p>
-              <p class="target-meta">
-                {room!.library} · {room!.capacity} seats{room!.equipment ? ` · ${room!.equipment.replaceAll(",", ", ")}` : ""}
+              <p class="target-when">
+                {friendlyDate(date)} · {slotRange(slot)}
               </p>
               <p class="target-meta">
-                {date}, {slotRange(slot)}
+                {room!.capacity} seats{room!.equipment ? ` · ${room!.equipment.replaceAll(",", ", ")}` : ""}
               </p>
               <form method="post" action="/api/bookings">
                 <input type="hidden" name="roomId" value={room!.id} />

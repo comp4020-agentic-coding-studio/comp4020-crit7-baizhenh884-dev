@@ -1,7 +1,7 @@
 ---
 import Nav from "../components/Nav.astro";
 import { ERROR_MESSAGES, listBookingsForEmail, listRooms } from "../lib/bookings";
-import { shortDate, shortRoomName, slotRange } from "../lib/format";
+import { friendlyDate, libraryClass, shortDate, shortRoomName, slotRange } from "../lib/format";
 import { rememberEmail, rememberedEmail } from "../lib/remember";
 import "../styles.css";
 
@@ -60,6 +60,7 @@ const successMessage =
       {queried && myBookings.length === 0 && !errorMessage && <p class="notice">No bookings found for {queried}.</p>}
       {
         myBookings.length > 0 && (
+          <div class="card list-card">
           <table class="list">
             <caption class="visually-hidden">Bookings for {queried}</caption>
             <thead>
@@ -75,8 +76,20 @@ const successMessage =
                 const room = rooms.get(booking.roomId);
                 return (
                   <tr class={booking.id === bookedId ? "highlight" : undefined}>
-                    <td>{room ? `${room.name} — ${room.library}` : `Room ${booking.roomId}`}</td>
-                    <td>{booking.date}</td>
+                    <td>
+                      {room ? (
+                        <span class={`room-cell ${libraryClass(room.library)}`}>
+                          <span class="lib-tag small">{room.library}</span>
+                          {shortRoomName(room.name, room.library)}
+                        </span>
+                      ) : (
+                        `Room ${booking.roomId}`
+                      )}
+                    </td>
+                    <td>
+                      <span class="dow">{friendlyDate(booking.date).split(" ")[0]}</span>{" "}
+                      {friendlyDate(booking.date).split(" ").slice(1).join(" ")}
+                    </td>
                     <td>{slotRange(booking.slot)}</td>
                     <td>
                       <form method="post" action="/api/bookings/cancel">
@@ -90,6 +103,7 @@ const successMessage =
               })}
             </tbody>
           </table>
+          </div>
         )
       }
     </main>
