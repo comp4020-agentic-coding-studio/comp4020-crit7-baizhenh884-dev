@@ -47,7 +47,11 @@ const freeCount = rooms.reduce(
 );
 
 // Date shortcuts keep whatever library / seat filters are already applied.
+// ‹ › only point inside the booking window, so the set of reachable pages
+// stays finite for crawlers such as CI's recursive link check.
 const realDate = friendlyDate(date) !== date;
+const prevDate = realDate ? datePlusDays(date, -1) : undefined;
+const nextDate = realDate ? datePlusDays(date, 1) : undefined;
 const dateHref = (target: string) => {
   const query = new URLSearchParams({ date: target });
   if (library) query.set("library", library);
@@ -79,10 +83,10 @@ const tomorrowStr = datePlusDays(todayStr, 1);
             <input type="date" name="date" value={date} />
           </label>
           <nav class="date-nav" aria-label="Change date">
-            {realDate && <a href={dateHref(datePlusDays(date, -1))} aria-label="Previous day">‹</a>}
+            {prevDate && isDateBookable(prevDate) && <a href={dateHref(prevDate)} aria-label="Previous day">‹</a>}
             <a href={dateHref(todayStr)} aria-current={isToday ? "date" : undefined}>Today</a>
             <a href={dateHref(tomorrowStr)} aria-current={date === tomorrowStr ? "date" : undefined}>Tomorrow</a>
-            {realDate && <a href={dateHref(datePlusDays(date, 1))} aria-label="Next day">›</a>}
+            {nextDate && isDateBookable(nextDate) && <a href={dateHref(nextDate)} aria-label="Next day">›</a>}
           </nav>
         </div>
         <label>
