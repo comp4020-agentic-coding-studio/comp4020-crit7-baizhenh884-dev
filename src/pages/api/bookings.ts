@@ -32,7 +32,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect(`${bookingsHref(booking.email)}&booked=${booking.id}`, 303);
   } catch (err) {
     if (err instanceof BookingError) {
-      return redirect(`/book?room=${roomId}&date=${date}&slot=${slot}&error=${err.code}`, 303);
+      const query = new URLSearchParams({ room: String(roomId), date, slot: String(slot), error: err.code });
+      return redirect(`/book?${query}`, 303);
     }
     throw err;
   }
