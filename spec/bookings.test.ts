@@ -197,6 +197,19 @@ describe("bookings", () => {
     });
   });
 
+  describe("grid outside the booking window", () => {
+    it.each([
+      ["yesterday", -1],
+      ["today+15", 15],
+    ])("offers no booking links for %s", async (_label, days) => {
+      const date = sydneyDatePlusDays(sydneyToday(), days);
+      const html = await (await fetch(new URL(`/?date=${date}`, baseUrl))).text();
+
+      expect(html, "the grid itself should still render").toContain(`Availability for ${date}`);
+      expect(html).not.toContain("/book?");
+    });
+  });
+
   describe("cancellation", () => {
     it("persists once cancelled, and requires the booking's own email", async () => {
       const room = rooms[6];
