@@ -29,6 +29,11 @@ Read them before you plan or build.
   tests prove the rules, not that the site is usable.
 - Open pages in a browser and look at them. The rendered page is the truth;
   your mental model of it isn't.
+- **Check contrast in a real browser.** The invariants run axe in jsdom with
+  `color-contrast` switched off (`spec/invariants.test.ts`), so a green
+  `pnpm check` proves nothing about contrast. Any change to colours or styling
+  gets axe run with `color-contrast` enabled in a real browser on every page
+  it touches, and the result is reported before the change is committed.
 - When a check fails, read its output before you change anything. If a test
   looks wrong, prove it against the running app before "fixing" the code to
   match it.
