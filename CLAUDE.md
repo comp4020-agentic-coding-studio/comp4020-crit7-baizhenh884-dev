@@ -51,12 +51,14 @@ Read them before you plan or build.
   trimmed and lowercased, with count and insert in one `db.transaction()`),
   today to 14 days ahead, and no slot that has already started. The UI may
   mirror these rules, but must never be the only place they are enforced.
-- **All dates and times are Australia/Sydney**, computed with
-  `Intl.DateTimeFormat`, never the machine's clock. Fly and CI run in UTC.
-- **Error codes are the contract:** `missing_fields`, `out_of_window`,
-  `past_slot`, `invalid_slot`, `unknown_room`, `daily_cap`, `slot_taken`,
-  `email_mismatch`, `not_found`. They're returned as `?error=<code>`, tested
-  by code, and shown to people through `ERROR_MESSAGES`.
+- **All dates and times the rules or users see are Australia/Sydney**,
+  computed with `Intl.DateTimeFormat`, never the machine's clock. Fly and CI
+  run in UTC.
+- **Error codes are the contract:** `missing_fields`, `invalid_date`,
+  `out_of_window`, `past_slot`, `invalid_slot`, `unknown_room`, `daily_cap`,
+  `slot_taken`, `email_mismatch`, `not_found`. They're returned as
+  `?error=<code>`, tested by code, and shown to people through
+  `ERROR_MESSAGES`.
 - **There is no login.** The remembered-email cookie only saves retyping. Don't
   treat it as identity, and don't add authentication without asking.
 
